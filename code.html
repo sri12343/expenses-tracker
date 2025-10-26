@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .expense-item {
+            transition: all 0.3s ease;
+        }
+        .expense-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .category-food { border-left: 4px solid #ef4444; }
+        .category-transport { border-left: 4px solid #3b82f6; }
+        .category-entertainment { border-left: 4px solid #8b5cf6; }
+        .category-shopping { border-left: 4px solid #f59e0b; }
+        .category-utilities { border-left: 4px solid #10b981; }
+        .category-other { border-left: 4px solid #6b7280; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-full font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">💰 Expense Tracker</h1>
+            <p class="text-gray-600">Keep track of your spending and visualize your financial habits</p>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div class="text-3xl mb-2">💸</div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">Total Spent</h3>
+                <p id="totalSpent" class="text-2xl font-bold text-red-500">$0.00</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div class="text-3xl mb-2">📊</div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">This Month</h3>
+                <p id="monthlySpent" class="text-2xl font-bold text-blue-500">$0.00</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div class="text-3xl mb-2">🎯</div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">Transactions</h3>
+                <p id="transactionCount" class="text-2xl font-bold text-green-500">0</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Add Expense Form -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <span class="mr-2">➕</span> Add New Expense
+                </h2>
+                <form id="expenseForm" class="space-y-4">
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <input type="text" id="description" name="description" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                               placeholder="What did you spend on?">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount ($)</label>
+                            <input type="number" id="amount" name="amount" step="0.01" min="0" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                   placeholder="0.00">
+                        </div>
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select id="category" name="category" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <option value="">Select category</option>
+                                <option value="food">🍕 Food & Dining</option>
+                                <option value="transport">🚗 Transportation</option>
+                                <option value="entertainment">🎬 Entertainment</option>
+                                <option value="shopping">🛍️ Shopping</option>
+                                <option value="utilities">⚡ Utilities</option>
+                                <option value="other">📦 Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                        <input type="date" id="date" name="date" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+                    <button type="submit" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 transform hover:scale-105">
+                        Add Expense
+                    </button>
+                </form>
+            </div>
+
+            <!-- Chart -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <span class="mr-2">📈</span> Spending by Category
+                </h2>
+                <div class="relative h-80">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense List -->
+        <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <span class="mr-2">📋</span> Recent Expenses
+                </h2>
+                <button id="clearAll" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                    Clear All
+                </button>
+            </div>
+            <div id="expenseList" class="space-y-3">
+                <div class="text-center text-gray-500 py-8">
+                    <div class="text-4xl mb-2">💳</div>
+                    <p>No expenses yet. Add your first expense above!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ExpenseTracker {
+            constructor() {
+                this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+                this.chart = null;
+                this.initializeChart();
+                this.bindEvents();
+                this.updateDisplay();
+                this.setTodayDate();
+            }
+
+            setTodayDate() {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('date').value = today;
+            }
+
+            bindEvents() {
+                document.getElementById('expenseForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addExpense();
+                });
+
+                document.getElementById('clearAll').addEventListener('click', () => {
+                    this.clearAllExpenses();
+                });
+            }
+
+            addExpense() {
+                const form = document.getElementById('expenseForm');
+                const formData = new FormData(form);
+                
+                const expense = {
+                    id: Date.now(),
+                    description: formData.get('description'),
+                    amount: parseFloat(formData.get('amount')),
+                    category: formData.get('category'),
+                    date: formData.get('date'),
+                    timestamp: new Date().toISOString()
+                };
+
+                this.expenses.unshift(expense);
+                this.saveToStorage();
+                this.updateDisplay();
+                form.reset();
+                this.setTodayDate();
+
+                // Show success feedback
+                this.showNotification('Expense added successfully! 🎉');
+            }
+
+            deleteExpense(id) {
+                this.expenses = this.expenses.filter(expense => expense.id !== id);
+                this.saveToStorage();
+                this.updateDisplay();
+                this.showNotification('Expense deleted! 🗑️');
+            }
+
+            clearAllExpenses() {
+                if (this.expenses.length === 0) return;
+                
+                // Create custom confirmation
+                const confirmDiv = document.createElement('div');
+                confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                confirmDiv.innerHTML = `
+                    <div class="bg-white rounded-xl p-6 max-w-sm mx-4 text-center">
+                        <div class="text-4xl mb-4">⚠️</div>
+                        <h3 class="text-lg font-semibold mb-2">Clear All Expenses?</h3>
+                        <p class="text-gray-600 mb-6">This action cannot be undone.</p>
+                        <div class="flex gap-3">
+                            <button id="confirmClear" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors">
+                                Yes, Clear All
+                            </button>
+                            <button id="cancelClear" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(confirmDiv);
+                
+                document.getElementById('confirmClear').addEventListener('click', () => {
+                    this.expenses = [];
+                    this.saveToStorage();
+                    this.updateDisplay();
+                    document.body.removeChild(confirmDiv);
+                    this.showNotification('All expenses cleared! 🧹');
+                });
+                
+                document.getElementById('cancelClear').addEventListener('click', () => {
+                    document.body.removeChild(confirmDiv);
+                });
+            }
+
+            showNotification(message) {
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.classList.remove('translate-x-full');
+                }, 100);
+                
+                setTimeout(() => {
+                    notification.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+
+            updateDisplay() {
+                this.updateSummary();
+                this.updateExpenseList();
+                this.updateChart();
+            }
+
+            updateSummary() {
+                const total = this.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                
+                const monthlyTotal = this.expenses
+                    .filter(expense => {
+                        const expenseDate = new Date(expense.date);
+                        return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+                    })
+                    .reduce((sum, expense) => sum + expense.amount, 0);
+
+                document.getElementById('totalSpent').textContent = `$${total.toFixed(2)}`;
+                document.getElementById('monthlySpent').textContent = `$${monthlyTotal.toFixed(2)}`;
+                document.getElementById('transactionCount').textContent = this.expenses.length;
+            }
+
+            updateExpenseList() {
+                const listContainer = document.getElementById('expenseList');
+                
+                if (this.expenses.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <div class="text-4xl mb-2">💳</div>
+                            <p>No expenses yet. Add your first expense above!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const categoryEmojis = {
+                    food: '🍕',
+                    transport: '🚗',
+                    entertainment: '🎬',
+                    shopping: '🛍️',
+                    utilities: '⚡',
+                    other: '📦'
+                };
+
+                listContainer.innerHTML = this.expenses.map(expense => `
+                    <div class="expense-item category-${expense.category} bg-gray-50 rounded-lg p-4 flex justify-between items-center">
+                        <div class="flex items-center space-x-4">
+                            <div class="text-2xl">${categoryEmojis[expense.category]}</div>
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${expense.description}</h4>
+                                <p class="text-sm text-gray-600">${new Date(expense.date).toLocaleDateString()} • ${expense.category}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-lg font-bold text-red-500">-$${expense.amount.toFixed(2)}</span>
+                            <button onclick="tracker.deleteExpense(${expense.id})" 
+                                    class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            initializeChart() {
+                const ctx = document.getElementById('expenseChart').getContext('2d');
+                this.chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [],
+                            backgroundColor: [
+                                '#ef4444', '#3b82f6', '#8b5cf6', 
+                                '#f59e0b', '#10b981', '#6b7280'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateChart() {
+                const categoryTotals = {};
+                const categoryLabels = {
+                    food: '🍕 Food & Dining',
+                    transport: '🚗 Transportation',
+                    entertainment: '🎬 Entertainment',
+                    shopping: '🛍️ Shopping',
+                    utilities: '⚡ Utilities',
+                    other: '📦 Other'
+                };
+
+                this.expenses.forEach(expense => {
+                    categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+                });
+
+                const labels = Object.keys(categoryTotals).map(key => categoryLabels[key]);
+                const data = Object.values(categoryTotals);
+
+                this.chart.data.labels = labels;
+                this.chart.data.datasets[0].data = data;
+                this.chart.update();
+            }
+
+            saveToStorage() {
+                localStorage.setItem('expenses', JSON.stringify(this.expenses));
+            }
+        }
+
+        // Initialize the expense tracker
+        const tracker = new ExpenseTracker();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'994a31006756db81',t:'MTc2MTQ4NDIwMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
